@@ -1,6 +1,9 @@
 node_modules/
 .next/
 .env.local
-rotina.db
 *.db
+*.db-shm
+*.db-wal
 nohup.out
+tsconfig.tsbuildinfo
+next-env.d.ts
