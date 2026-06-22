@@ -8,3 +8,4 @@ node_modules/
 nohup.out
 tsconfig.tsbuildinfo
 next-env.d.ts
+.vercel
