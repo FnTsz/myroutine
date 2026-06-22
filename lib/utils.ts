@@ -7,7 +7,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function today(): string {
-  return format(new Date(), "yyyy-MM-dd");
+  const now = new Date();
+  if (now.getHours() < 3) {
+    now.setDate(now.getDate() - 1);
+  }
+  return format(now, "yyyy-MM-dd");
 }
 
 export function formatDate(date: string): string {

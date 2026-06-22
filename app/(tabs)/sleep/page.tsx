@@ -23,14 +23,15 @@ type RangeKey = "30" | "60" | "90";
 
 function scoreColor(score: number): string {
   if (score >= 80) return "#10b981";
-  if (score >= 60) return "#f59e0b";
+  if (score >= 70) return "#3b82f6";
+  if (score >= 50) return "#f59e0b";
   return "#ef4444";
 }
 
 function scoreLabel(score: number): string {
-  if (score >= 80) return "ótimo";
-  if (score >= 60) return "bom";
-  if (score >= 40) return "regular";
+  if (score >= 80) return "excelente";
+  if (score >= 70) return "bom";
+  if (score >= 50) return "regular";
   return "ruim";
 }
 
@@ -224,9 +225,10 @@ export default function SleepPage() {
           {/* Legend */}
           {logs.length >= 2 && (
             <div className="flex gap-4 mt-3 text-xs text-zinc-500">
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> ≥80 ótimo</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> ≥60 bom</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> &lt;60 ruim</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> 80–100 excelente</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> 70–79 bom</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> 50–69 regular</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> 0–49 ruim</span>
             </div>
           )}
         </CardContent>

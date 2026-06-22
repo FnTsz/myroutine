@@ -4,11 +4,14 @@ import { habitLogs } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { today } from "@/lib/utils";
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const habitId = Number(id);
-    const date = today();
+    const body = req.headers.get("content-type")?.includes("application/json")
+      ? await req.json().catch(() => ({}))
+      : {};
+    const date = body.date ?? today();
 
     const existing = await db
       .select()

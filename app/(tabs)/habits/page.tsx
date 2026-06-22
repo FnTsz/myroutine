@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Flame, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Trash2, Flame, CheckCircle2, Circle, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, startOfMonth, getDaysInMonth, addMonths, subMonths, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { HabitHeatmap } from "@/components/habit-heatmap";
+import { today } from "@/lib/utils";
 
 interface Habit {
   id: number;
@@ -31,6 +34,7 @@ export default function HabitsPage() {
   const [logs, setLogs] = useState<Record<number, HabitLog[]>>({});
   const [open, setOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [calMonth, setCalMonth] = useState<Date>(() => startOfMonth(parseISO(today())));
   const [form, setForm] = useState({ name: "", frequency: "daily", frequencyDays: "1", color: COLORS[0] });
 
   async function load() {
@@ -39,11 +43,15 @@ export default function HabitsPage() {
     setHabits(data);
   }
 
-  async function loadLogs(id: number) {
-    if (logs[id]) return;
+  async function reloadLogs(id: number) {
     const res = await fetch(`/api/habits/${id}/logs`);
     const data = await res.json();
     setLogs((prev) => ({ ...prev, [id]: data }));
+  }
+
+  async function loadLogs(id: number) {
+    if (logs[id]) return;
+    reloadLogs(id);
   }
 
   useEffect(() => { load(); }, []);
@@ -51,6 +59,16 @@ export default function HabitsPage() {
   async function toggle(id: number) {
     await fetch(`/api/habits/${id}/toggle`, { method: "POST" });
     load();
+  }
+
+  async function toggleDate(id: number, date: string) {
+    await fetch(`/api/habits/${id}/toggle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date }),
+    });
+    load();
+    reloadLogs(id);
   }
 
   async function create() {
@@ -213,9 +231,72 @@ export default function HabitsPage() {
               </div>
 
               {expandedId === habit.id && (
-                <div className="px-4 pb-4 border-t border-zinc-800 pt-4">
-                  <p className="text-xs text-zinc-500 mb-3">Últimos 365 dias</p>
-                  <HabitHeatmap logs={logs[habit.id] ?? []} color={habit.color} />
+                <div className="px-4 pb-4 border-t border-zinc-800 pt-4 space-y-4">
+                  {/* Monthly calendar */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs text-zinc-400 font-medium capitalize">
+                        {format(calMonth, "MMMM yyyy", { locale: ptBR })}
+                      </p>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => setCalMonth((m) => subMonths(m, 1))}
+                          className="p-1 rounded text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setCalMonth((m) => addMonths(m, 1))}
+                          className="p-1 rounded text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    {(() => {
+                      const todayStr = today();
+                      const monthKey = format(calMonth, "yyyy-MM");
+                      const daysInMonth = getDaysInMonth(calMonth);
+                      const habitLogs = logs[habit.id] ?? [];
+                      const completedDates = new Set(
+                        habitLogs.filter((l) => l.completed && l.date.startsWith(monthKey)).map((l) => l.date)
+                      );
+
+                      return (
+                        <div className="flex flex-wrap gap-1.5">
+                          {Array.from({ length: daysInMonth }, (_, i) => {
+                            const day = i + 1;
+                            const dateStr = `${monthKey}-${String(day).padStart(2, "0")}`;
+                            const isFuture = dateStr > todayStr;
+                            const done = completedDates.has(dateStr);
+
+                            return (
+                              <button
+                                key={day}
+                                disabled={isFuture}
+                                onClick={() => toggleDate(habit.id, dateStr)}
+                                title={`${day}/${format(calMonth, "MM")} — ${done ? "concluído (clique para desmarcar)" : "não feito (clique para marcar)"}`}
+                                className="w-8 h-8 rounded text-xs font-medium transition-all hover:opacity-80 disabled:cursor-default disabled:opacity-25"
+                                style={{
+                                  backgroundColor: done ? habit.color : "transparent",
+                                  color: done ? "#fff" : "#71717a",
+                                  border: done ? "none" : "1px solid #3f3f46",
+                                }}
+                              >
+                                {day}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Heatmap */}
+                  <div>
+                    <p className="text-xs text-zinc-500 mb-3">Últimos 365 dias</p>
+                    <HabitHeatmap logs={logs[habit.id] ?? []} color={habit.color} />
+                  </div>
                 </div>
               )}
             </CardContent>

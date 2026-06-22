@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
-import { CheckCircle2, Circle, Flame, Moon, Utensils, Dumbbell } from "lucide-react";
+import { CheckCircle2, Circle, Flame, Moon, Utensils, Dumbbell, Droplets } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { today, MEAL_LABELS, metersToKm, secondsToTime, formatShortDate } from "@/lib/utils";
+import { HabitMonthlyGrid } from "@/components/habit-monthly-grid";
+import { SleepMiniChart } from "@/components/sleep-mini-chart";
 
 interface Habit { id: number; name: string; color: string; completedToday: boolean; streak: number; }
 interface Meal { id: number; mealType: string; description: string; calories: number | null; }
@@ -13,7 +15,8 @@ interface Plan { id: number; date: string; title: string; type: string; plannedD
 
 function scoreColor(score: number) {
   if (score >= 80) return "#10b981";
-  if (score >= 60) return "#f59e0b";
+  if (score >= 70) return "#3b82f6";
+  if (score >= 50) return "#f59e0b";
   return "#ef4444";
 }
 
@@ -24,33 +27,47 @@ export default function DashboardPage() {
   const [sleepLog, setSleepLog] = useState<SleepLog | null>(null);
   const [todayActivity, setTodayActivity] = useState<Activity | null>(null);
   const [todayPlan, setTodayPlan] = useState<Plan | null>(null);
+  const [hydrationMl, setHydrationMl] = useState(0);
+  const [gridKey, setGridKey] = useState(0);
   const todayStr = today();
+  const HYDRATION_GOAL = 3000;
 
   useEffect(() => {
     async function loadAll() {
-      const [habitsRes, dietRes, sleepRes, trainingRes] = await Promise.all([
+      const [habitsRes, dietRes, sleepRes, trainingRes, hydrationRes] = await Promise.all([
         fetch("/api/habits"),
         fetch(`/api/diet?date=${todayStr}`),
         fetch("/api/sleep?days=1"),
         fetch(`/api/training?from=${todayStr}&to=${todayStr}`),
+        fetch(`/api/hydration?date=${todayStr}`),
       ]);
 
-      const [habitsData, dietData, sleepData, trainingData] = await Promise.all([
+      const [habitsData, dietData, sleepData, trainingData, hydrationData] = await Promise.all([
         habitsRes.json(),
         dietRes.json(),
         sleepRes.json(),
         trainingRes.json(),
+        hydrationRes.json(),
       ]);
 
       setHabits(habitsData);
       setMeals(dietData.meals ?? []);
       setDailyGoal(dietData.dailyGoal ?? 2000);
-      setSleepLog(sleepData[0] ?? null);
+      setSleepLog(sleepData.find((l: SleepLog) => l.date === todayStr) ?? null);
       setTodayActivity(trainingData.activities?.[0] ?? null);
       setTodayPlan(trainingData.plans?.[0] ?? null);
+      setHydrationMl(hydrationData.amountMl ?? 0);
     }
     loadAll();
   }, []);
+
+  async function toggleHabit(id: number) {
+    await fetch(`/api/habits/${id}/toggle`, { method: "POST" });
+    setHabits((prev) =>
+      prev.map((h) => h.id === id ? { ...h, completedToday: !h.completedToday } : h)
+    );
+    setGridKey((k) => k + 1);
+  }
 
   const completedHabits = habits.filter((h) => h.completedToday).length;
   const totalCal = meals.reduce((s, m) => s + (m.calories ?? 0), 0);
@@ -63,7 +80,7 @@ export default function DashboardPage() {
         <p className="text-sm text-zinc-500 mt-1">{format(new Date(), "EEEE, d 'de' MMMM", { locale: undefined })}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {/* Habits summary */}
         <Card>
           <CardContent className="pt-5">
@@ -118,6 +135,31 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Hydration */}
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-center gap-2 text-zinc-400 text-sm mb-2">
+              <Droplets className="w-4 h-4" />
+              Hidratação
+            </div>
+            <p className="text-3xl font-bold text-zinc-100">
+              {hydrationMl >= 1000 ? `${(hydrationMl / 1000).toFixed(1)}L` : `${hydrationMl}ml`}
+            </p>
+            <div className="mt-2 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(100, Math.round((hydrationMl / HYDRATION_GOAL) * 100))}%`,
+                  backgroundColor: hydrationMl >= HYDRATION_GOAL ? "#10b981" : "#3b82f6",
+                }}
+              />
+            </div>
+            <p className="text-xs text-zinc-500 mt-1">
+              {Math.min(100, Math.round((hydrationMl / HYDRATION_GOAL) * 100))}% da meta (3L)
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Training */}
         <Card>
           <CardContent className="pt-5">
@@ -148,6 +190,9 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      <HabitMonthlyGrid refreshKey={gridKey} />
+      <SleepMiniChart />
+
       <div className="grid grid-cols-2 gap-4">
         {/* Habits list */}
         <Card>
@@ -158,7 +203,11 @@ export default function DashboardPage() {
             ) : (
               <div className="divide-y divide-zinc-800">
                 {habits.map((h) => (
-                  <div key={h.id} className="flex items-center gap-3 px-5 py-2.5">
+                  <button
+                    key={h.id}
+                    onClick={() => toggleHabit(h.id)}
+                    className="w-full flex items-center gap-3 px-5 py-2.5 hover:bg-zinc-800/50 transition-colors text-left"
+                  >
                     {h.completedToday ? (
                       <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: h.color }} />
                     ) : (
@@ -172,7 +221,7 @@ export default function DashboardPage() {
                         <Flame className="w-3 h-3" />{h.streak}
                       </span>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

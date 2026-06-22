@@ -50,6 +50,13 @@ export const trainingPlans = pgTable("training_plans", {
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
+export const hydrationLogs = pgTable("hydration_logs", {
+  id: serial("id").primaryKey(),
+  date: text("date").notNull().unique(),
+  amountMl: integer("amount_ml").notNull().default(0),
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+});
+
 export const stravaTokens = pgTable("strava_tokens", {
   id: serial("id").primaryKey(),
   athleteId: integer("athlete_id").notNull(),
