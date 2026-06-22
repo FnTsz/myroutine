@@ -1,0 +1,6 @@
+node_modules/
+.next/
+.env.local
+rotina.db
+*.db
+nohup.out
