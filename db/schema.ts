@@ -43,6 +43,16 @@ export const sleepLogs = pgTable("sleep_logs", {
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
+export const workoutLogs = pgTable("workout_logs", {
+  id: serial("id").primaryKey(),
+  date: text("date").notNull(),
+  name: text("name").notNull(),
+  category: text("category").notNull().default("outro"),
+  durationMin: integer("duration_min"),
+  calories: integer("calories"),
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+});
+
 export const trainingPlans = pgTable("training_plans", {
   id: serial("id").primaryKey(),
   date: text("date").notNull(),
