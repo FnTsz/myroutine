@@ -16,25 +16,30 @@ interface Meal {
   mealType: string;
   description: string;
   calories: number | null;
+  protein: number | null;
+  carbs: number | null;
 }
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
-const MEAL_ORDER = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 };
 
 export default function DietPage() {
   const [date, setDate] = useState(today());
   const [meals, setMeals] = useState<Meal[]>([]);
-  const [dailyGoal, setDailyGoal] = useState(2000);
+  const [goals, setGoals] = useState({ calories: 2000, protein: 150, carbs: 250 });
   const [open, setOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
-  const [goalInput, setGoalInput] = useState("");
-  const [form, setForm] = useState({ mealType: "breakfast", description: "", calories: "" });
+  const [goalInput, setGoalInput] = useState({ calories: "", protein: "", carbs: "" });
+  const [form, setForm] = useState({ mealType: "breakfast", description: "", calories: "", protein: "", carbs: "" });
 
   async function load() {
     const res = await fetch(`/api/diet?date=${date}`);
     const data = await res.json();
     setMeals(data.meals ?? []);
-    setDailyGoal(data.dailyGoal ?? 2000);
+    setGoals({
+      calories: data.dailyGoal ?? 2000,
+      protein: data.proteinGoal ?? 150,
+      carbs: data.carbsGoal ?? 250,
+    });
   }
 
   useEffect(() => { load(); }, [date]);
@@ -49,9 +54,11 @@ export default function DietPage() {
         mealType: form.mealType,
         description: form.description,
         calories: form.calories ? Number(form.calories) : null,
+        protein: form.protein ? Number(form.protein) : null,
+        carbs: form.carbs ? Number(form.carbs) : null,
       }),
     });
-    setForm({ mealType: "breakfast", description: "", calories: "" });
+    setForm({ mealType: "breakfast", description: "", calories: "", protein: "", carbs: "" });
     setOpen(false);
     load();
   }
@@ -65,14 +72,25 @@ export default function DietPage() {
     await fetch("/api/diet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "config", dailyGoal: Number(goalInput) }),
+      body: JSON.stringify({
+        type: "config",
+        dailyGoal: Number(goalInput.calories),
+        proteinGoal: Number(goalInput.protein),
+        carbsGoal: Number(goalInput.carbs),
+      }),
     });
     setConfigOpen(false);
     load();
   }
 
-  const totalCal = meals.reduce((s, m) => s + (m.calories ?? 0), 0);
-  const pct = Math.min(100, Math.round((totalCal / dailyGoal) * 100));
+  const totals = meals.reduce(
+    (acc, m) => ({
+      calories: acc.calories + (m.calories ?? 0),
+      protein: acc.protein + (m.protein ?? 0),
+      carbs: acc.carbs + (m.carbs ?? 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0 }
+  );
 
   const byType = MEAL_TYPES.reduce<Record<string, Meal[]>>((acc, t) => {
     acc[t] = meals.filter((m) => m.mealType === t).sort((a, b) => a.id - b.id);
@@ -85,8 +103,14 @@ export default function DietPage() {
     if (next <= today()) setDate(next);
   }
 
+  const macros = [
+    { key: "calories" as const, label: "Calorias", unit: "kcal", color: "#6366f1" },
+    { key: "protein" as const, label: "Proteína", unit: "g", color: "#10b981" },
+    { key: "carbs" as const, label: "Carboidrato", unit: "g", color: "#f59e0b" },
+  ];
+
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">Dieta</h1>
@@ -104,16 +128,28 @@ export default function DietPage() {
         <div className="flex gap-2">
           <Dialog open={configOpen} onOpenChange={setConfigOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => setGoalInput(String(dailyGoal))}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setGoalInput({ calories: String(goals.calories), protein: String(goals.protein), carbs: String(goals.carbs) })}
+              >
                 <Settings className="w-4 h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Meta calórica diária</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Metas diárias</DialogTitle></DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Calorias por dia</Label>
-                  <Input type="number" value={goalInput} onChange={(e) => setGoalInput(e.target.value)} />
+                  <Label>Calorias (kcal)</Label>
+                  <Input type="number" value={goalInput.calories} onChange={(e) => setGoalInput({ ...goalInput, calories: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Proteína (g)</Label>
+                  <Input type="number" value={goalInput.protein} onChange={(e) => setGoalInput({ ...goalInput, protein: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Carboidrato (g)</Label>
+                  <Input type="number" value={goalInput.carbs} onChange={(e) => setGoalInput({ ...goalInput, carbs: e.target.value })} />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" onClick={() => setConfigOpen(false)}>Cancelar</Button>
@@ -146,14 +182,19 @@ export default function DietPage() {
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Calorias estimadas (opcional)</Label>
-                  <Input
-                    type="number"
-                    placeholder="350"
-                    value={form.calories}
-                    onChange={(e) => setForm({ ...form, calories: e.target.value })}
-                  />
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label>Calorias</Label>
+                    <Input type="number" placeholder="350" value={form.calories} onChange={(e) => setForm({ ...form, calories: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Proteína (g)</Label>
+                    <Input type="number" placeholder="20" value={form.protein} onChange={(e) => setForm({ ...form, protein: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Carbo (g)</Label>
+                    <Input type="number" placeholder="40" value={form.carbs} onChange={(e) => setForm({ ...form, carbs: e.target.value })} />
+                  </div>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -165,30 +206,36 @@ export default function DietPage() {
         </div>
       </div>
 
-      {/* Calorie progress */}
-      <Card>
-        <CardContent className="pt-5">
-          <div className="flex items-baseline justify-between mb-2">
-            <span className="text-zinc-400 text-sm">Calorias</span>
-            <span className="text-zinc-400 text-sm">
-              <span className="text-zinc-100 font-semibold text-lg">{totalCal}</span>
-              {" / "}{dailyGoal} kcal
-            </span>
-          </div>
-          <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${pct}%`,
-                backgroundColor: pct >= 100 ? "#ef4444" : pct >= 80 ? "#f59e0b" : "#6366f1",
-              }}
-            />
-          </div>
-          <p className="text-xs text-zinc-500 mt-1.5">
-            {pct >= 100 ? `+${totalCal - dailyGoal} kcal acima da meta` : `${dailyGoal - totalCal} kcal restantes`}
-          </p>
-        </CardContent>
-      </Card>
+      {/* Macro progress */}
+      <div className="grid grid-cols-3 gap-4">
+        {macros.map(({ key, label, unit, color }) => {
+          const total = totals[key];
+          const goal = goals[key];
+          const pct = Math.min(100, Math.round((total / goal) * 100));
+          return (
+            <Card key={key}>
+              <CardContent className="pt-5">
+                <div className="flex items-baseline justify-between mb-2">
+                  <span className="text-zinc-400 text-sm">{label}</span>
+                  <span className="text-xs text-zinc-500 tabular-nums">{pct}%</span>
+                </div>
+                <p className="text-2xl font-bold text-zinc-100 tabular-nums">
+                  {total}<span className="text-sm text-zinc-500 font-normal"> / {goal} {unit}</span>
+                </p>
+                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${pct}%`, backgroundColor: total > goal ? "#ef4444" : color }}
+                  />
+                </div>
+                <p className="text-xs text-zinc-500 mt-1.5">
+                  {total > goal ? `+${total - goal} ${unit} acima` : `${goal - total} ${unit} restantes`}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
       {/* Meals by type */}
       {MEAL_TYPES.map((type) => (
@@ -211,9 +258,11 @@ export default function DietPage() {
                 {byType[type].map((meal) => (
                   <div key={meal.id} className="flex items-center gap-3">
                     <span className="flex-1 text-sm text-zinc-200">{meal.description}</span>
-                    {meal.calories && (
-                      <span className="text-xs text-zinc-500 tabular-nums">{meal.calories} kcal</span>
-                    )}
+                    <span className="flex gap-2 text-xs text-zinc-500 tabular-nums">
+                      {meal.calories != null && <span>{meal.calories} kcal</span>}
+                      {meal.protein != null && <span className="text-emerald-500/70">P {meal.protein}g</span>}
+                      {meal.carbs != null && <span className="text-amber-500/70">C {meal.carbs}g</span>}
+                    </span>
                     <button onClick={() => remove(meal.id)} className="text-zinc-700 hover:text-red-400 transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

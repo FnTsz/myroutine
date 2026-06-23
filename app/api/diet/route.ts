@@ -18,7 +18,12 @@ export async function GET(req: NextRequest) {
     }
 
     const config = await db.select().from(dietConfig).limit(1);
-    return NextResponse.json({ meals: mealsList, dailyGoal: config[0]?.dailyGoal ?? 2000 });
+    return NextResponse.json({
+      meals: mealsList,
+      dailyGoal: config[0]?.dailyGoal ?? 2000,
+      proteinGoal: config[0]?.proteinGoal ?? 150,
+      carbsGoal: config[0]?.carbsGoal ?? 250,
+    });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
@@ -29,11 +34,16 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     if (body.type === "config") {
+      const values = {
+        dailyGoal: body.dailyGoal,
+        proteinGoal: body.proteinGoal,
+        carbsGoal: body.carbsGoal,
+      };
       const existing = await db.select().from(dietConfig).limit(1);
       if (existing.length > 0) {
-        await db.update(dietConfig).set({ dailyGoal: body.dailyGoal });
+        await db.update(dietConfig).set(values);
       } else {
-        await db.insert(dietConfig).values({ dailyGoal: body.dailyGoal });
+        await db.insert(dietConfig).values(values);
       }
       return NextResponse.json({ ok: true });
     }
@@ -43,6 +53,8 @@ export async function POST(req: NextRequest) {
       mealType: body.mealType,
       description: body.description,
       calories: body.calories ?? null,
+      protein: body.protein ?? null,
+      carbs: body.carbs ?? null,
     }).returning();
     return NextResponse.json(result[0]);
   } catch (e) {

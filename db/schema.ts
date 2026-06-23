@@ -23,12 +23,16 @@ export const meals = pgTable("meals", {
   mealType: text("meal_type").notNull(),
   description: text("description").notNull(),
   calories: integer("calories"),
+  protein: integer("protein"),
+  carbs: integer("carbs"),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
 export const dietConfig = pgTable("diet_config", {
   id: serial("id").primaryKey(),
   dailyGoal: integer("daily_goal").notNull().default(2000),
+  proteinGoal: integer("protein_goal").notNull().default(150),
+  carbsGoal: integer("carbs_goal").notNull().default(250),
 });
 
 export const sleepLogs = pgTable("sleep_logs", {

@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
-import { CheckCircle2, Circle, Flame, Moon, Utensils, Dumbbell, Droplets } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { today, MEAL_LABELS, metersToKm, secondsToTime, formatShortDate } from "@/lib/utils";
+import { CheckCircle2, Moon, Utensils, Dumbbell, Droplets } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { today, metersToKm, secondsToTime } from "@/lib/utils";
 import { HabitMonthlyGrid } from "@/components/habit-monthly-grid";
 import { SleepMiniChart } from "@/components/sleep-mini-chart";
 
@@ -28,7 +28,7 @@ export default function DashboardPage() {
   const [todayActivity, setTodayActivity] = useState<Activity | null>(null);
   const [todayPlan, setTodayPlan] = useState<Plan | null>(null);
   const [hydrationMl, setHydrationMl] = useState(0);
-  const [gridKey, setGridKey] = useState(0);
+  const [gridKey] = useState(0);
   const todayStr = today();
   const HYDRATION_GOAL = 3000;
 
@@ -60,14 +60,6 @@ export default function DashboardPage() {
     }
     loadAll();
   }, []);
-
-  async function toggleHabit(id: number) {
-    await fetch(`/api/habits/${id}/toggle`, { method: "POST" });
-    setHabits((prev) =>
-      prev.map((h) => h.id === id ? { ...h, completedToday: !h.completedToday } : h)
-    );
-    setGridKey((k) => k + 1);
-  }
 
   const completedHabits = habits.filter((h) => h.completedToday).length;
   const totalCal = meals.reduce((s, m) => s + (m.calories ?? 0), 0);
@@ -192,62 +184,6 @@ export default function DashboardPage() {
 
       <HabitMonthlyGrid refreshKey={gridKey} />
       <SleepMiniChart />
-
-      <div className="grid grid-cols-2 gap-4">
-        {/* Habits list */}
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Hábitos de hoje</CardTitle></CardHeader>
-          <CardContent className="p-0">
-            {habits.length === 0 ? (
-              <p className="px-5 pb-4 text-sm text-zinc-600">Nenhum hábito criado.</p>
-            ) : (
-              <div className="divide-y divide-zinc-800">
-                {habits.map((h) => (
-                  <button
-                    key={h.id}
-                    onClick={() => toggleHabit(h.id)}
-                    className="w-full flex items-center gap-3 px-5 py-2.5 hover:bg-zinc-800/50 transition-colors text-left"
-                  >
-                    {h.completedToday ? (
-                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: h.color }} />
-                    ) : (
-                      <Circle className="w-4 h-4 flex-shrink-0 text-zinc-700" />
-                    )}
-                    <span className={`text-sm flex-1 ${h.completedToday ? "line-through text-zinc-600" : "text-zinc-200"}`}>
-                      {h.name}
-                    </span>
-                    {h.streak > 0 && (
-                      <span className="text-xs flex items-center gap-0.5" style={{ color: h.color }}>
-                        <Flame className="w-3 h-3" />{h.streak}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Meals today */}
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Refeições hoje</CardTitle></CardHeader>
-          <CardContent className="p-0">
-            {meals.length === 0 ? (
-              <p className="px-5 pb-4 text-sm text-zinc-600">Nenhum registro ainda.</p>
-            ) : (
-              <div className="divide-y divide-zinc-800">
-                {meals.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3 px-5 py-2.5">
-                    <span className="text-xs text-zinc-500 w-20 flex-shrink-0">{MEAL_LABELS[m.mealType]}</span>
-                    <span className="text-sm text-zinc-200 flex-1 truncate">{m.description}</span>
-                    {m.calories && <span className="text-xs text-zinc-500 tabular-nums">{m.calories}</span>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
