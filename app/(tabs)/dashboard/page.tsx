@@ -12,6 +12,7 @@ interface Meal { id: number; mealType: string; description: string; calories: nu
 interface SleepLog { id: number; date: string; score: number; notes: string | null; }
 interface Activity { id: number; date: string; name: string; type: string; distance: number | null; duration: number | null; avgHeartRate: number | null; }
 interface Plan { id: number; date: string; title: string; type: string; plannedDistance: number | null; }
+interface WorkoutLog { id: number; name: string; calories: number | null; }
 
 function scoreColor(score: number) {
   if (score >= 80) return "#10b981";
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [sleepLog, setSleepLog] = useState<SleepLog | null>(null);
   const [todayActivity, setTodayActivity] = useState<Activity | null>(null);
   const [todayPlan, setTodayPlan] = useState<Plan | null>(null);
+  const [todayWorkouts, setTodayWorkouts] = useState<WorkoutLog[]>([]);
   const [hydrationMl, setHydrationMl] = useState(0);
   const [gridKey] = useState(0);
   const todayStr = today();
@@ -34,20 +36,22 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadAll() {
-      const [habitsRes, dietRes, sleepRes, trainingRes, hydrationRes] = await Promise.all([
+      const [habitsRes, dietRes, sleepRes, trainingRes, hydrationRes, workoutsRes] = await Promise.all([
         fetch("/api/habits"),
         fetch(`/api/diet?date=${todayStr}`),
         fetch("/api/sleep?days=1"),
         fetch(`/api/training?from=${todayStr}&to=${todayStr}`),
         fetch(`/api/hydration?date=${todayStr}`),
+        fetch(`/api/workouts?from=${todayStr}&to=${todayStr}`),
       ]);
 
-      const [habitsData, dietData, sleepData, trainingData, hydrationData] = await Promise.all([
+      const [habitsData, dietData, sleepData, trainingData, hydrationData, workoutsData] = await Promise.all([
         habitsRes.json(),
         dietRes.json(),
         sleepRes.json(),
         trainingRes.json(),
         hydrationRes.json(),
+        workoutsRes.json(),
       ]);
 
       setHabits(habitsData);
@@ -56,6 +60,7 @@ export default function DashboardPage() {
       setSleepLog(sleepData.find((l: SleepLog) => l.date === todayStr) ?? null);
       setTodayActivity(trainingData.activities?.[0] ?? null);
       setTodayPlan(trainingData.plans?.[0] ?? null);
+      setTodayWorkouts(workoutsData.workouts ?? []);
       setHydrationMl(hydrationData.amountMl ?? 0);
     }
     loadAll();
@@ -64,6 +69,7 @@ export default function DashboardPage() {
   const completedHabits = habits.filter((h) => h.completedToday).length;
   const totalCal = meals.reduce((s, m) => s + (m.calories ?? 0), 0);
   const calPct = Math.min(100, Math.round((totalCal / dailyGoal) * 100));
+  const calsBurned = todayWorkouts.reduce((s, w) => s + (w.calories ?? 0), 0);
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -167,6 +173,12 @@ export default function DashboardPage() {
                   {todayActivity.duration ? " · " + secondsToTime(todayActivity.duration) : ""}
                 </p>
               </>
+            ) : todayWorkouts.length > 0 ? (
+              <>
+                <p className="text-sm font-semibold text-amber-400 truncate">
+                  {todayWorkouts.length === 1 ? todayWorkouts[0].name : `${todayWorkouts.length} treinos`}
+                </p>
+              </>
             ) : todayPlan ? (
               <>
                 <p className="text-sm font-medium text-indigo-400 truncate">{todayPlan.title}</p>
@@ -177,6 +189,9 @@ export default function DashboardPage() {
                 <p className="text-3xl font-bold text-zinc-600">—</p>
                 <p className="text-xs text-zinc-600 mt-1">descanso</p>
               </>
+            )}
+            {calsBurned > 0 && (
+              <p className="text-xs text-orange-400 mt-1 font-medium">🔥 {calsBurned} kcal gastas</p>
             )}
           </CardContent>
         </Card>
