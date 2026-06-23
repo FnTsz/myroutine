@@ -30,6 +30,8 @@ export default function DietPage() {
   const [configOpen, setConfigOpen] = useState(false);
   const [goalInput, setGoalInput] = useState({ calories: "", protein: "", carbs: "" });
   const [form, setForm] = useState({ mealType: "breakfast", description: "", calories: "", protein: "", carbs: "" });
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   async function load() {
     const res = await fetch(`/api/diet?date=${date}`);
@@ -45,22 +47,37 @@ export default function DietPage() {
   useEffect(() => { load(); }, [date]);
 
   async function add() {
-    if (!form.description.trim()) return;
-    await fetch("/api/diet", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date,
-        mealType: form.mealType,
-        description: form.description,
-        calories: form.calories ? Number(form.calories) : null,
-        protein: form.protein ? Number(form.protein) : null,
-        carbs: form.carbs ? Number(form.carbs) : null,
-      }),
-    });
-    setForm({ mealType: "breakfast", description: "", calories: "", protein: "", carbs: "" });
-    setOpen(false);
-    load();
+    if (!form.description.trim()) {
+      setFormError("Adicione uma descrição.");
+      return;
+    }
+    setFormError("");
+    setSaving(true);
+    try {
+      const res = await fetch("/api/diet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date,
+          mealType: form.mealType,
+          description: form.description.trim(),
+          calories: form.calories ? Number(form.calories) : null,
+          protein: form.protein ? Number(form.protein) : null,
+          carbs: form.carbs ? Number(form.carbs) : null,
+        }),
+      });
+      if (!res.ok) {
+        setFormError("Não foi possível salvar. Tente novamente.");
+        return;
+      }
+      setForm({ mealType: "breakfast", description: "", calories: "", protein: "", carbs: "" });
+      setOpen(false);
+      load();
+    } catch {
+      setFormError("Erro de conexão. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function remove(id: number) {
@@ -158,7 +175,7 @@ export default function DietPage() {
               </div>
             </DialogContent>
           </Dialog>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(o) => { setOpen(o); setFormError(""); }}>
             <DialogTrigger asChild>
               <Button><Plus className="w-4 h-4" /> Adicionar</Button>
             </DialogTrigger>
@@ -196,9 +213,10 @@ export default function DietPage() {
                     <Input type="number" placeholder="40" value={form.carbs} onChange={(e) => setForm({ ...form, carbs: e.target.value })} />
                   </div>
                 </div>
+                {formError && <p className="text-sm text-red-400">{formError}</p>}
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-                  <Button onClick={add}>Adicionar</Button>
+                  <Button onClick={add} disabled={saving}>{saving ? "Salvando..." : "Adicionar"}</Button>
                 </div>
               </div>
             </DialogContent>

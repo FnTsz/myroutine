@@ -22,9 +22,9 @@ export const meals = pgTable("meals", {
   date: text("date").notNull(),
   mealType: text("meal_type").notNull(),
   description: text("description").notNull(),
-  calories: integer("calories"),
-  protein: integer("protein"),
-  carbs: integer("carbs"),
+  calories: real("calories"),
+  protein: real("protein"),
+  carbs: real("carbs"),
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
