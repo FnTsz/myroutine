@@ -39,6 +39,9 @@ App pessoal de controle de rotina (hábitos, dieta, treinos, sono, hidratação)
 > Mantido por sessão. Entradas mais recentes no topo. Sempre que terminarmos algo,
 > registro aqui um resumo curto do que foi feito (e por quê), para a próxima sessão já ter contexto.
 
+## 2026-06-26
+- **Treinos de musculação (estáticos):** aba Treinos → Musculação agora lista treinos fixos (hardcoded) no array `WORKOUTS` em `app/(tabs)/training/musculacao/page.tsx`. Cada treino vira uma sub-aba mostrando rounds + exercícios (reps em destaque) e um botão "Ver vídeo" que abre o link numa nova aba. Sem banco/API/formulário — o usuário manda treino + link e eu adiciono um objeto no array. Decisão: vídeo do Instagram não é embutido (Instagram bloqueia embed), só link clicável. Primeiro treino: "Single Kettbell Funcional I".
+
 ## 2026-06-23
 - **PWA (app instalável):** site agora pode ser instalado como programa no PC/celular. Adicionados `app/manifest.ts` (abre no `/dashboard`, `display: standalone`, tema `#09090b`), ícones em `public/` (`icon-192/512.png`, `apple-icon.png` — fundo âmbar com "F"), service worker `public/sw.js` (network-first; ignora `/api`, cache só como fallback offline) registrado via `components/sw-register.tsx`. Metadata (manifest, theme-color, apple icon) no `app/layout.tsx`. Instalação exige HTTPS → funciona na URL da Vercel.
 - **Correção da dieta:** colunas `calories`/`protein`/`carbs` mudadas de `integer`→`real` (registro de almoço falhava silenciosamente com valores decimais). Botão "Adicionar" agora valida descrição e mostra erro em vez de fechar calado. (commit `e5b1d72`)
