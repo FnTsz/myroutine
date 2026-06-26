@@ -216,6 +216,20 @@ const WORKOUTS: MuscleWorkout[] = [
     ],
     videoUrl: "https://www.instagram.com/p/DY2ELlWOl41/",
   },
+  {
+    id: "single-kettbell-funcional-iii",
+    name: "Single Kettbell Funcional III",
+    rounds: "6 a 8 rounds · 30–40 min",
+    exercises: [
+      { scheme: "12", name: "Bent Over Rows" },
+      { scheme: "12", name: "Swings" },
+      { scheme: "12", name: "Goblet Squats" },
+      { scheme: "12", name: "Thrusters" },
+      { scheme: "12", name: "Devil's Halos (6 por direção)" },
+      { scheme: "12", name: "Around the Worlds (12 por direção)" },
+    ],
+    videoUrl: "https://www.instagram.com/p/DY8wU8attFl/",
+  },
 ];
 
 export default function MusculacaoPage() {
