@@ -7,6 +7,7 @@ const tabs = [
   { href: "/training", label: "Visão geral" },
   { href: "/training/musculacao", label: "Musculação" },
   { href: "/training/mobilidade", label: "Mobilidade/Fortalecimento" },
+  { href: "/training/exercicios", label: "Como executar" },
 ];
 
 export function TrainingTabs() {
