@@ -224,9 +224,12 @@ export default function MusculacaoPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-100">Musculação</h1>
-        <p className="text-sm text-zinc-500 mt-1">Suas opções de treino de musculação</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-100">Musculação</h1>
+          <p className="text-sm text-zinc-500 mt-1">Suas opções de treino de musculação</p>
+        </div>
+        <Stopwatch />
       </div>
 
       {WORKOUTS.length === 0 ? (
@@ -279,8 +282,6 @@ export default function MusculacaoPage() {
                     Ver vídeo
                   </a>
                 </div>
-
-                <Stopwatch key={active.id} />
 
                 <ExerciseList key={active.id} workout={active} />
               </CardContent>
