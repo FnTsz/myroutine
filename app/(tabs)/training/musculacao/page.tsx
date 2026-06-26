@@ -1,8 +1,90 @@
 "use client";
-import { useState } from "react";
-import { Dumbbell, PlayCircle, Repeat } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Dumbbell, PlayCircle, Repeat, Play, Square, RotateCcw, Timer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+
+function formatStopwatch(totalSec: number): string {
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+function Stopwatch() {
+  const [elapsed, setElapsed] = useState(0); // segundos
+  const [running, setRunning] = useState(false);
+  const startRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => {
+      if (startRef.current != null) {
+        setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+      }
+    }, 200);
+    return () => clearInterval(id);
+  }, [running]);
+
+  function start() {
+    startRef.current = Date.now() - elapsed * 1000;
+    setRunning(true);
+  }
+  function finish() {
+    setRunning(false);
+  }
+  function reset() {
+    setRunning(false);
+    setElapsed(0);
+    startRef.current = null;
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        className={cn(
+          "flex items-center gap-2 rounded-lg border px-3 py-2 tabular-nums font-mono text-lg font-semibold transition-colors",
+          running
+            ? "border-emerald-600/40 bg-emerald-600/10 text-emerald-300"
+            : "border-zinc-800 bg-zinc-900 text-zinc-300"
+        )}
+      >
+        <Timer className={cn("w-4 h-4", running && "text-emerald-400")} />
+        {formatStopwatch(elapsed)}
+      </div>
+
+      {!running ? (
+        <button
+          onClick={start}
+          className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-2 text-sm font-medium text-white transition-colors"
+        >
+          <Play className="w-4 h-4" />
+          {elapsed > 0 ? "Continuar" : "Iniciar"}
+        </button>
+      ) : (
+        <button
+          onClick={finish}
+          className="flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-500 px-3 py-2 text-sm font-medium text-white transition-colors"
+        >
+          <Square className="w-4 h-4" />
+          Finalizar
+        </button>
+      )}
+
+      {elapsed > 0 && (
+        <button
+          onClick={reset}
+          className="flex items-center justify-center w-9 h-9 rounded-lg border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors"
+          title="Reiniciar"
+        >
+          <RotateCcw className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 interface Exercise {
   reps: string;
@@ -96,6 +178,8 @@ export default function MusculacaoPage() {
                     Ver vídeo
                   </a>
                 </div>
+
+                <Stopwatch key={active.id} />
 
                 <div className="divide-y divide-zinc-800 rounded-lg border border-zinc-800 overflow-hidden">
                   {active.exercises.map((ex, i) => (
