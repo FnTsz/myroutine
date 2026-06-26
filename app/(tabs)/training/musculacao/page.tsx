@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Dumbbell, PlayCircle, Repeat, Play, Square, RotateCcw, Timer } from "lucide-react";
+import { Dumbbell, PlayCircle, Repeat, Play, Square, RotateCcw, Timer, Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -87,16 +87,103 @@ function Stopwatch() {
 }
 
 interface Exercise {
-  reps: string;
   name: string;
+  scheme: string; // ex: "5", "4 × 12"
+  perSide?: boolean;
 }
 
 interface MuscleWorkout {
   id: string;
   name: string;
   rounds?: string;
+  checkable?: boolean; // mostra checkbox por exercício
   exercises: Exercise[];
   videoUrl: string;
+}
+
+function ExerciseList({ workout }: { workout: MuscleWorkout }) {
+  const storageKey = `musc-check-${workout.id}`;
+  const [done, setDone] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    if (!workout.checkable) return;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      setDone(raw ? JSON.parse(raw) : {});
+    } catch {
+      setDone({});
+    }
+  }, [storageKey, workout.checkable]);
+
+  function toggle(i: number) {
+    setDone((prev) => {
+      const next = { ...prev, [i]: !prev[i] };
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }
+
+  function clearAll() {
+    setDone({});
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {}
+  }
+
+  const anyDone = Object.values(done).some(Boolean);
+
+  return (
+    <div className="space-y-2">
+      <div className="divide-y divide-zinc-800 rounded-lg border border-zinc-800 overflow-hidden">
+        {workout.exercises.map((ex, i) => {
+          const isDone = workout.checkable && done[i];
+          return (
+            <div
+              key={i}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 transition-colors",
+                isDone ? "bg-emerald-600/5" : "bg-zinc-900/50"
+              )}
+            >
+              {workout.checkable && (
+                <button
+                  onClick={() => toggle(i)}
+                  aria-pressed={isDone}
+                  className={cn(
+                    "flex items-center justify-center w-6 h-6 rounded-md border flex-shrink-0 transition-colors",
+                    isDone
+                      ? "bg-emerald-600 border-emerald-600 text-white"
+                      : "border-zinc-700 hover:border-zinc-500"
+                  )}
+                >
+                  {isDone && <Check className="w-4 h-4" />}
+                </button>
+              )}
+              <span
+                className={cn(
+                  "flex items-center justify-center min-w-9 h-9 px-2 rounded-md text-sm font-semibold tabular-nums flex-shrink-0",
+                  isDone ? "bg-zinc-800 text-zinc-500" : "bg-amber-600/15 text-amber-300"
+                )}
+              >
+                {ex.scheme}
+              </span>
+              <span className={cn("text-sm", isDone ? "text-zinc-500 line-through" : "text-zinc-200")}>
+                {ex.name}
+              </span>
+              {ex.perSide && <span className="ml-auto text-xs text-zinc-500 flex-shrink-0">por lado</span>}
+            </div>
+          );
+        })}
+      </div>
+      {workout.checkable && anyDone && (
+        <button onClick={clearAll} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+          Desmarcar tudo
+        </button>
+      )}
+    </div>
+  );
 }
 
 // Treinos de musculação. Para adicionar um novo, basta incluir um objeto aqui.
@@ -106,14 +193,28 @@ const WORKOUTS: MuscleWorkout[] = [
     name: "Single Kettbell Funcional I",
     rounds: "6 a 8 rounds",
     exercises: [
-      { reps: "5", name: "Swings" },
-      { reps: "5", name: "Row" },
-      { reps: "5", name: "Kneeling Press" },
-      { reps: "5", name: "Goblet Squat" },
-      { reps: "5", name: "Horn Curl" },
-      { reps: "5", name: "Pushup" },
+      { scheme: "5", name: "Swings" },
+      { scheme: "5", name: "Row" },
+      { scheme: "5", name: "Kneeling Press" },
+      { scheme: "5", name: "Goblet Squat" },
+      { scheme: "5", name: "Horn Curl" },
+      { scheme: "5", name: "Pushup" },
     ],
     videoUrl: "https://www.instagram.com/p/DaA4vwqOzmj/",
+  },
+  {
+    id: "single-kettbell-funcional-ii",
+    name: "Single Kettbell Funcional II",
+    checkable: true,
+    exercises: [
+      { scheme: "4 × 12", name: "Lawn Mower Row", perSide: true },
+      { scheme: "4 × 12", name: "HN Press", perSide: true },
+      { scheme: "4 × 12", name: "Goblet Squat" },
+      { scheme: "4 × 10", name: "Suitcase Lunge", perSide: true },
+      { scheme: "4 × 6", name: "Halo", perSide: true },
+      { scheme: "4 × 6", name: "Chop", perSide: true },
+    ],
+    videoUrl: "https://www.instagram.com/p/DY2ELlWOl41/",
   },
 ];
 
@@ -181,16 +282,7 @@ export default function MusculacaoPage() {
 
                 <Stopwatch key={active.id} />
 
-                <div className="divide-y divide-zinc-800 rounded-lg border border-zinc-800 overflow-hidden">
-                  {active.exercises.map((ex, i) => (
-                    <div key={i} className="flex items-center gap-3 px-4 py-3 bg-zinc-900/50">
-                      <span className="flex items-center justify-center w-9 h-9 rounded-md bg-amber-600/15 text-amber-300 text-sm font-semibold tabular-nums flex-shrink-0">
-                        {ex.reps}
-                      </span>
-                      <span className="text-sm text-zinc-200">{ex.name}</span>
-                    </div>
-                  ))}
-                </div>
+                <ExerciseList key={active.id} workout={active} />
               </CardContent>
             </Card>
           )}
