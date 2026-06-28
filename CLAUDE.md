@@ -39,6 +39,9 @@ App pessoal de controle de rotina (hábitos, dieta, treinos, sono, hidratação)
 > Mantido por sessão. Entradas mais recentes no topo. Sempre que terminarmos algo,
 > registro aqui um resumo curto do que foi feito (e por quê), para a próxima sessão já ter contexto.
 
+## 2026-06-28
+- **Editar observação de registros de sono:** na aba Sono → "Registros", cada item ganhou um botão de lápis ao lado da lixeira que abre um textarea inline (pré-preenchido com a nota atual) para adicionar/editar a observação de um registro já existente. Salva via `POST /api/sleep` reenviando o `score` atual + nova `notes` (upsert por data; não altera a nota). Trata `res.ok`. Antes só dava pra anotar no registro novo. (commit `227fbe6`)
+
 ## 2026-06-26
 - **Treinos de musculação (estáticos):** aba Treinos → Musculação agora lista treinos fixos (hardcoded) no array `WORKOUTS` em `app/(tabs)/training/musculacao/page.tsx`. Cada treino vira uma sub-aba mostrando rounds + exercícios (reps em destaque) e um botão "Ver vídeo" que abre o link numa nova aba. Sem banco/API/formulário — o usuário manda treino + link e eu adiciono um objeto no array. Decisão: vídeo do Instagram não é embutido (Instagram bloqueia embed), só link clicável. Primeiro treino: "Single Kettbell Funcional I".
 
