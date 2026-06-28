@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil, Check, X } from "lucide-react";
 import { today, formatShortDate } from "@/lib/utils";
 
 interface SleepLog {
@@ -70,6 +70,9 @@ export default function SleepPage() {
   const [range, setRange] = useState<RangeKey>("30");
   const [form, setForm] = useState({ date: today(), score: "", notes: "" });
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   async function load() {
     const res = await fetch(`/api/sleep?days=${range}`);
@@ -95,6 +98,32 @@ export default function SleepPage() {
 
   async function remove(id: number) {
     await fetch(`/api/sleep?id=${id}`, { method: "DELETE" });
+    load();
+  }
+
+  function startEditNote(log: SleepLog) {
+    setEditingId(log.id);
+    setNoteDraft(log.notes ?? "");
+  }
+
+  function cancelEditNote() {
+    setEditingId(null);
+    setNoteDraft("");
+  }
+
+  async function saveNote(log: SleepLog) {
+    setSavingNote(true);
+    const res = await fetch("/api/sleep", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: log.date, score: log.score, notes: noteDraft.trim() || null }),
+    });
+    setSavingNote(false);
+    if (!res.ok) {
+      alert("Erro ao salvar observação");
+      return;
+    }
+    cancelEditNote();
     load();
   }
 
@@ -243,25 +272,57 @@ export default function SleepPage() {
           <CardContent className="p-0">
             <div className="divide-y divide-zinc-800">
               {[...logs].reverse().map((log) => (
-                <div key={log.id} className="flex items-center gap-4 px-5 py-3">
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: scoreColor(log.score) }}
-                  />
-                  <span className="text-sm text-zinc-400 w-20 flex-shrink-0">{formatShortDate(log.date)}</span>
-                  <span className="font-semibold tabular-nums" style={{ color: scoreColor(log.score) }}>
-                    {log.score}
-                  </span>
-                  <span className="text-xs text-zinc-500">{scoreLabel(log.score)}</span>
-                  {log.notes && (
-                    <span className="text-xs text-zinc-600 flex-1 truncate">{log.notes}</span>
+                <div key={log.id} className="px-5 py-3">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: scoreColor(log.score) }}
+                    />
+                    <span className="text-sm text-zinc-400 w-20 flex-shrink-0">{formatShortDate(log.date)}</span>
+                    <span className="font-semibold tabular-nums" style={{ color: scoreColor(log.score) }}>
+                      {log.score}
+                    </span>
+                    <span className="text-xs text-zinc-500">{scoreLabel(log.score)}</span>
+                    {log.notes && editingId !== log.id && (
+                      <span className="text-xs text-zinc-600 flex-1 truncate">{log.notes}</span>
+                    )}
+                    <div className="ml-auto flex items-center gap-2">
+                      <button
+                        onClick={() => (editingId === log.id ? cancelEditNote() : startEditNote(log))}
+                        className="text-zinc-700 hover:text-zinc-300 transition-colors"
+                        title={log.notes ? "Editar observação" : "Adicionar observação"}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => remove(log.id)}
+                        className="text-zinc-700 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  {editingId === log.id && (
+                    <div className="mt-2 pl-6 space-y-2">
+                      <Textarea
+                        placeholder="Acordei às 3h, dormi tarde..."
+                        value={noteDraft}
+                        onChange={(e) => setNoteDraft(e.target.value)}
+                        rows={2}
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" className="h-7 text-xs" onClick={() => saveNote(log)} disabled={savingNote}>
+                          <Check className="w-3.5 h-3.5 mr-1" />
+                          {savingNote ? "Salvando..." : "Salvar"}
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={cancelEditNote} disabled={savingNote}>
+                          <X className="w-3.5 h-3.5 mr-1" />
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
                   )}
-                  <button
-                    onClick={() => remove(log.id)}
-                    className="ml-auto text-zinc-700 hover:text-red-400 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
                 </div>
               ))}
             </div>
