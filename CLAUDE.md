@@ -39,6 +39,9 @@ App pessoal de controle de rotina (hábitos, dieta, treinos, sono, hidratação)
 > Mantido por sessão. Entradas mais recentes no topo. Sempre que terminarmos algo,
 > registro aqui um resumo curto do que foi feito (e por quê), para a próxima sessão já ter contexto.
 
+## 2026-06-30
+- **Editar histórico de hidratação:** na aba Hidratação, o card "Últimos 14 dias" agora permite (1) **editar o total de um dia existente** inline (lápis → input em ml → salva) e (2) **"Registrar dia anterior"** (toggle no header, date picker com default = ontem + total em ml) para dias sem registro nenhum (não apareciam na lista). Ambos usam `POST /api/hydration` com `set: true` (upsert por data, sobrescreve o total). Salvar ≥ 3000 ml dispara o auto-check do hábito Água do dia (lógica existente). Card de histórico agora sempre renderiza (com empty state) pra permitir registrar dia anterior mesmo sem histórico. Sem mudança de schema/API.
+
 ## 2026-06-28
 - **Editar observação de registros de sono:** na aba Sono → "Registros", cada item ganhou um botão de lápis ao lado da lixeira que abre um textarea inline (pré-preenchido com a nota atual) para adicionar/editar a observação de um registro já existente. Salva via `POST /api/sleep` reenviando o `score` atual + nova `notes` (upsert por data; não altera a nota). Trata `res.ok`. Antes só dava pra anotar no registro novo. (commit `227fbe6`)
 

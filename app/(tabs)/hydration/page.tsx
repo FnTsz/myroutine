@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Droplets, RotateCcw, Plus } from "lucide-react";
+import { format, subDays } from "date-fns";
+import { Droplets, RotateCcw, Plus, Pencil, Check, X, CalendarPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { today, formatShortDate } from "@/lib/utils";
 
 interface HydrationLog {
@@ -30,6 +32,11 @@ export default function HydrationPage() {
   const [history, setHistory] = useState<HydrationLog[]>([]);
   const [custom, setCustom] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editingDate, setEditingDate] = useState<string | null>(null);
+  const [editMl, setEditMl] = useState("");
+  const [showAddPast, setShowAddPast] = useState(false);
+  const [pastDate, setPastDate] = useState(format(subDays(new Date(), 1), "yyyy-MM-dd"));
+  const [pastMl, setPastMl] = useState("");
   const todayStr = today();
 
   async function load() {
@@ -66,6 +73,48 @@ export default function HydrationPage() {
     });
     setLoading(false);
     load();
+  }
+
+  // Define o total de um dia (cria ou sobrescreve). Usado para editar histórico.
+  async function setDay(date: string, ml: number): Promise<boolean> {
+    if (isNaN(ml) || ml < 0 || loading) return false;
+    setLoading(true);
+    const res = await fetch("/api/hydration", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date, amountMl: ml, set: true }),
+    });
+    setLoading(false);
+    if (!res.ok) {
+      alert("Erro ao salvar");
+      return false;
+    }
+    load();
+    return true;
+  }
+
+  function startEdit(log: HydrationLog) {
+    setEditingDate(log.date);
+    setEditMl(String(log.amountMl));
+  }
+
+  function cancelEdit() {
+    setEditingDate(null);
+    setEditMl("");
+  }
+
+  async function saveEdit(date: string) {
+    const ok = await setDay(date, Number(editMl));
+    if (ok) cancelEdit();
+  }
+
+  async function addPast() {
+    if (!pastDate) return;
+    const ok = await setDay(pastDate, Number(pastMl));
+    if (ok) {
+      setShowAddPast(false);
+      setPastMl("");
+    }
   }
 
   const pct = Math.min(100, Math.round((todayMl / GOAL) * 100));
@@ -173,35 +222,119 @@ export default function HydrationPage() {
       </Card>
 
       {/* History */}
-      {history.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Últimos 14 dias</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Últimos 14 dias</CardTitle>
+          <button
+            onClick={() => setShowAddPast((s) => !s)}
+            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            <CalendarPlus className="w-3.5 h-3.5" />
+            Registrar dia anterior
+          </button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {showAddPast && (
+            <div className="flex flex-wrap items-end gap-3 px-5 py-4 border-b border-zinc-800 bg-zinc-900/40">
+              <div className="space-y-1.5">
+                <Label>Data</Label>
+                <Input
+                  type="date"
+                  value={pastDate}
+                  max={todayStr}
+                  onChange={(e) => setPastDate(e.target.value)}
+                  className="w-36"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Total do dia (ml)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="3000"
+                  value={pastMl}
+                  onChange={(e) => setPastMl(e.target.value)}
+                  className="w-28"
+                  onKeyDown={(e) => e.key === "Enter" && addPast()}
+                />
+              </div>
+              <Button onClick={addPast} disabled={loading || !pastDate || pastMl === ""}>
+                Salvar
+              </Button>
+            </div>
+          )}
+
+          {history.length === 0 && !showAddPast ? (
+            <p className="px-5 py-6 text-sm text-zinc-600 text-center">Sem registros anteriores.</p>
+          ) : (
             <div className="divide-y divide-zinc-800">
               {history.map((log) => {
                 const p = Math.min(100, Math.round((log.amountMl / GOAL) * 100));
+                const isEditing = editingDate === log.date;
                 return (
                   <div key={log.id} className="flex items-center gap-4 px-5 py-3">
                     <span className="text-sm text-zinc-400 w-20 flex-shrink-0">{formatShortDate(log.date)}</span>
-                    <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${p}%`, backgroundColor: progressColor(p) }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-zinc-300 w-16 text-right tabular-nums">
-                      {mlLabel(log.amountMl)}
-                    </span>
-                    <span className="text-xs text-zinc-600 w-8 text-right tabular-nums">{p}%</span>
+                    {isEditing ? (
+                      <>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={editMl}
+                          onChange={(e) => setEditMl(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveEdit(log.date);
+                            if (e.key === "Escape") cancelEdit();
+                          }}
+                          autoFocus
+                          className="w-28 h-8"
+                        />
+                        <span className="text-xs text-zinc-600">ml</span>
+                        <div className="ml-auto flex items-center gap-1.5">
+                          <button
+                            onClick={() => saveEdit(log.date)}
+                            disabled={loading}
+                            className="text-zinc-500 hover:text-emerald-400 transition-colors"
+                            title="Salvar"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                            title="Cancelar"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${p}%`, backgroundColor: progressColor(p) }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-zinc-300 w-16 text-right tabular-nums">
+                          {mlLabel(log.amountMl)}
+                        </span>
+                        <span className="text-xs text-zinc-600 w-8 text-right tabular-nums">{p}%</span>
+                        <button
+                          onClick={() => startEdit(log)}
+                          className="text-zinc-700 hover:text-zinc-300 transition-colors"
+                          title="Editar"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
