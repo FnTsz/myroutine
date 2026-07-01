@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CheckSquare, Dumbbell, Utensils, Moon, Droplets } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Dumbbell, Utensils, Moon, Droplets, Popcorn } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -9,6 +9,7 @@ const links = [
   { href: "/habits", label: "Hábitos", icon: CheckSquare },
   { href: "/training", label: "Treinos", icon: Dumbbell },
   { href: "/diet", label: "Dieta", icon: Utensils },
+  { href: "/entertainment", label: "Entretenimento", icon: Popcorn },
   { href: "/sleep", label: "Sono", icon: Moon },
   { href: "/hydration", label: "Hidratação", icon: Droplets },
 ];

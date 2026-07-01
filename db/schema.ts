@@ -71,6 +71,16 @@ export const hydrationLogs = pgTable("hydration_logs", {
   createdAt: text("created_at").notNull().default(new Date().toISOString()),
 });
 
+export const entertainment = pgTable("entertainment", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(), // "filme" | "serie" | "livro"
+  name: text("name").notNull(),
+  author: text("author"), // escritor / diretor / criador
+  date: text("date"),
+  rating: real("rating"), // 1-5, permite meia estrela (1.5, 2.5, ...)
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+});
+
 export const stravaTokens = pgTable("strava_tokens", {
   id: serial("id").primaryKey(),
   athleteId: integer("athlete_id").notNull(),
